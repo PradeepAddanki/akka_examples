@@ -57,10 +57,22 @@ public class HighLevelServerExample extends AllDirectives {
         final Http http = Http.get(system);
         final ActorMaterializer materializer = ActorMaterializer.create(system);
 
-        final Flow<HttpRequest, HttpResponse, NotUsed> routeFlow = app.getRequestContext().flow(system, materializer);
+        final Flow<HttpRequest, HttpResponse, NotUsed> routeFlow = app.setCookies().flow(system, materializer);
         http.bindAndHandle(routeFlow, ConnectHttp.toHost("localhost", 8080), materializer);
     }
 
+    public Route setCookies(){
+        Route optionalCookies =  optionalCookie("userName", optNameCookie -> {
+            if (optNameCookie.isPresent()) {
+                return complete("The logged in user is '" + optNameCookie.get().value() + "'");
+            } else {
+                return complete("No user logged in");
+            }});
+
+        Route route = setCookie(HttpCookie.create("userName", "paul"), ()->optionalCookies);
+
+        return route;
+    }
     public Route getRequestContext1() {
         //Route route = path("sample", () -> extractExecutionContext(executor -> onSuccess(CompletableFuture.supplyAsync(() -> "Run on " + executor.hashCode() + "!", executor), str -> complete(str))));
        // RejectionHandler.defaultHandler().mapRejectionResponse(re)
@@ -94,7 +106,7 @@ public class HighLevelServerExample extends AllDirectives {
     }
 
     public Route getRequestContext(){
-        final HttpChallenge challenge = HttpChallenge.create("MyAuth", new Option.Some<>("MyRealm"));
+        final HttpChallenge challenge = HttpChallenge.create("WWW-Authenticate", new Option.Some<>("Negotiate"));
 //
 //        // your custom authentication logic:
 //        final Function<HttpCredentials, Boolean> auth = credentials -> true;
@@ -152,15 +164,19 @@ public class HighLevelServerExample extends AllDirectives {
                             .collect(Collectors.joining(" or "));
                     return complete(StatusCodes.METHOD_NOT_ALLOWED, "Can't do that! Supported: " + supported + "!");
                 })
-                .handleNotFound(complete(StatusCodes.NOT_FOUND, "Not here!"))
+                .handleNotFound(complete(StatusCodes.UNAUTHORIZED, "Not here!"))
                 .build();
 
 
-        Route route = handleRejections(rejectionHandler, () ->
+        Route route = handleRejections(rejectionHandlerBuilder, () ->
                 path("hello", () ->
                         extractRequestContext(ctx -> {
-                            ctx.reject(Rejections.authenticationCredentialsMissing(HttpChallenge.create("WWW-Authentication", "Test")));
-                            return complete("======="+ctx.getRequest().getHeaders());})
+                            HttpChallenge challengeHeader = HttpChallenge.create("Negotiate", "authorization");
+
+                            //ctx.reject(Rejections.authenticationCredentialsMissing(HttpChallenge.create("WWW-Authentication", "Test")));
+                            return reject(Rejections.authenticationCredentialsMissing(challengeHeader));
+                        })
+                            //return complete("======="+ctx.getRequest().getHeaders());})
                 ));
 
 
