@@ -83,4 +83,28 @@ public class AESFile {
         System.out.println("Encrypted Text : " + encryptedText);
         System.out.println("Decrypted Text : " + decryptedText);
     }
+    
+        public void demonstrateBuildFlowFromPartialGraphDSLCreate() throws Exception {
+        // #flow-from-partial-graph-dsl
+        Flow<Integer, Integer,NotUsed> filter1 = Flow.of(Integer.class).map(e->e*100);
+        Flow<Integer, Integer,NotUsed> filter2 = Flow.of(Integer.class).map(e->e*200);
+        final Flow<Integer, Integer, NotUsed> pairs =
+                Flow.fromGraph(
+                        GraphDSL.create(
+                                b -> {
+                                    final UniformFanOutShape<Integer, Integer> bcast = b.add(Broadcast.create(2));
+                                    final UniformFanInShape<Integer, Integer> merge = b.add(Merge.create(2));
+                                    b.from(bcast).via(b.add(Flow.of(Integer.class).filter(i -> i.equals(1)))).via(b.add(filter1)).viaFanIn(merge);
+                                    b.from(bcast).via(b.add(Flow.of(Integer.class).map(i -> i*10))).via(b.add(filter2)).toFanIn(merge);
+                                     return FlowShape.of(bcast.in(), merge.out());
+                                }));
+
+        // #flow-from-partial-graph-dsl
+//        final CompletionStage<Integer> matSink =
+//                // #flow-from-partial-graph-dsl
+        Source.range(1, 10).via(pairs).runWith(Sink.foreach(e->System.out.println(e)), system);
+        // #flow-from-partial-graph-dsl
+
+        //System.out.println(matSink.toCompletableFuture().get(3, TimeUnit.SECONDS));
+    }
 }
