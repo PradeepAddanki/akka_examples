@@ -17,6 +17,7 @@ import java.security.spec.KeySpec;
 import java.util.Base64;
 
 public class AESFile {
+///^(?:(ftp|http|https):\/\/)?(?:[\w-]+\.)+[a-z]{3,6}$/;
     private static String algorithm = "AES";
     private static byte[] keyValue = new byte[]{'0', '2', '3', '4', '5', '6', '7', '8', '9', '1', '2', '3', '4', '5', '6', '7'};// your key
     private static final int SALT_LENGTH_BYTE = 16;
