@@ -1,3 +1,6 @@
+//kumarap29@gmail.com
+
+
 //Establish the WebSocket connection and set up event handlers
 var webSocket = new WebSocket("ws://localhost:9001/stats");
 webSocket.onmessage = function (msg) { updateChat(msg); };
